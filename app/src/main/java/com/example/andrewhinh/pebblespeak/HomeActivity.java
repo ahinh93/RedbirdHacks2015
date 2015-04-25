@@ -18,9 +18,11 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.UUID;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -32,6 +34,8 @@ public class HomeActivity extends Activity {
 
     private ListView mainMenu;
     private ArrayAdapter<String> listAdapter;
+
+    private static UUID appID = UUID.fromString("1cbdacd9-5c25-46dc-bba6-757b92a7d3b9");
     /**
      * Whether or not the system UI should be auto-hidden after
      * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -170,7 +174,8 @@ public class HomeActivity extends Activity {
 
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.i(getLocalClassName(), "Pebble connected!");
+                Toast.makeText(HomeActivity.this, "Pebble connected!", Toast.LENGTH_SHORT).show();
+                
             }
 
         });
@@ -179,7 +184,8 @@ public class HomeActivity extends Activity {
 
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.i(getLocalClassName(), "Pebble disconnected!");
+                Toast.makeText(HomeActivity.this, "Pebble disconnected!", Toast.LENGTH_SHORT).show();
+
             }
 
         });
