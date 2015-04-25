@@ -1,4 +1,4 @@
-package com.example.andrewhinh.pebblespeak;
+package com.example.andrewhinh.pebblespeak.data.model;
 
 import android.util.Log;
 import org.json.JSONObject;

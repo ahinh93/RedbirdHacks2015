@@ -1,5 +1,7 @@
-package com.example.andrewhinh.pebblespeak;
+package com.example.andrewhinh.pebblespeak.activity;
 
+import com.example.andrewhinh.pebblespeak.R;
+import com.example.andrewhinh.pebblespeak.data.model.PebbleService;
 import com.example.andrewhinh.pebblespeak.util.SystemUiHider;
 import com.getpebble.android.kit.PebbleKit;
 
@@ -16,7 +18,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -34,8 +35,6 @@ public class HomeActivity extends Activity {
 
     private ListView mainMenu;
     private ArrayAdapter<String> listAdapter;
-
-    private static UUID appID = UUID.fromString("1cbdacd9-5c25-46dc-bba6-757b92a7d3b9");
     /**
      * Whether or not the system UI should be auto-hidden after
      * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -64,11 +63,13 @@ public class HomeActivity extends Activity {
      */
     private SystemUiHider mSystemUiHider;
 
+    private PebbleService mPebbleService;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_home);
+        setContentView(R.layout.activity_selection);
 
         //tie to .xml variable
         mainMenu = (ListView) findViewById( R.id.mainMenu );
@@ -162,33 +163,10 @@ public class HomeActivity extends Activity {
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
-        boolean connected = PebbleKit.isWatchConnected(getApplicationContext());
-        Log.i(getLocalClassName(), "Pebble is " + (connected ? "connected" : "not connected"));
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.
         delayedHide(100);
-
-        PebbleKit.registerPebbleConnectedReceiver(getApplicationContext(), new BroadcastReceiver() {
-
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Toast.makeText(HomeActivity.this, "Pebble connected!", Toast.LENGTH_SHORT).show();
-                
-            }
-
-        });
-
-        PebbleKit.registerPebbleDisconnectedReceiver(getApplicationContext(), new BroadcastReceiver() {
-
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Toast.makeText(HomeActivity.this, "Pebble disconnected!", Toast.LENGTH_SHORT).show();
-
-            }
-
-        });
     }
 
 
