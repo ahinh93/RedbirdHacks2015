@@ -13,6 +13,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -71,6 +72,7 @@ public class SelectionActivity extends Activity {
 
     private PebbleService mPebbleService;
 
+    private Camera cam;
 
     private boolean isBound = false;
 
@@ -110,6 +112,8 @@ public class SelectionActivity extends Activity {
         //tie to .xml variable
         mainMenu = (ListView) findViewById( R.id.mainMenu );
 
+        cam = Camera.open();
+
 
         // Create ArrayAdapter using the planet list.
         listAdapter = new IntentAdapter(SelectionActivity.this, R.layout.item_user);
@@ -119,20 +123,31 @@ public class SelectionActivity extends Activity {
 
         String clientId = "my_client_id";
         Intent soundIntent = new Intent("com.soundcloud.android.SHARE")
-                .putExtra("com.soundcloud.android.extra.tags", new String[] {
-                        "soundcloud:created-with-client-id="+clientId
+                .putExtra("com.soundcloud.android.extra.tags", new String[]{
+                        "soundcloud:created-with-client-id=" + clientId
                 });
 
         listAdapter.add( new Pair<String, Intent> ("Message", sendIntent) );
         listAdapter.add( new Pair<String, Intent> ("Call", new Intent(Intent.ACTION_DIAL)) );
-        listAdapter.add( new Pair<String, Intent> ("Sound", soundIntent ));
+        listAdapter.add( new Pair<String, Intent> ("Flashlight", sendIntent ));
+        listAdapter.add( new Pair<String, Intent> ("Gmail", sendIntent ));
+
 
         mainMenu.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Toast.makeText(getApplicationContext(), listAdapter.getItem(position).first, Toast.LENGTH_SHORT).show();
-                if (mPebbleService != null)
-                    mPebbleService.setBottomIntent(listAdapter.getItem(position).second);
+                if (mPebbleService != null) {
+                    if (position == 0)
+                        mPebbleService.setBottomIntent(listAdapter.getItem(position).second);
+                    if (position == 2) {
+                        Camera.Parameters p = cam.getParameters();
+                        p.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                        cam.setParameters(p);
+                        cam.startPreview();
+
+                    }
+                }
             }
         });
 
@@ -147,9 +162,16 @@ public class SelectionActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        //cam.stopPreview();
+        //cam.release();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        unbindService(mConnection);
+        //unbindService(mConnection);
     }
 
     private void doBindService() {

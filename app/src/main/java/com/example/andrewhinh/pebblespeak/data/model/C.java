@@ -7,5 +7,5 @@ import java.util.UUID;
  */
 public final class C {
     public static final String TAG = "yourepo";
-    public static final UUID APP_ID = UUID.fromString("1cbdacd9-5c25-46dc-bba6-757b92a7d3b9");
+    public static final UUID APP_ID = UUID.fromString("1b82298a-593d-42de-be19-4cd66e6914c3");
 }

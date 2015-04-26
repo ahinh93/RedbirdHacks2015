@@ -4,11 +4,14 @@ import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.Camera;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.getpebble.android.kit.Constants;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 
@@ -26,6 +29,27 @@ public class PebbleService extends Service {
     public static Intent leftIntent, rightIntent, bottomIntent, shakeIntent;
 
     private final IBinder mBinder = new BluetoothBinder();
+
+    private Camera cam;
+
+    private boolean actionReceived = false;
+
+    private Handler mHandler = new Handler();
+
+    final Runnable r = new Runnable() {
+        public void run() {
+            actionReceived=false;
+        }
+    };
+
+    final Runnable toggleFlash = new Runnable() {
+        @Override
+        public void run() {
+            actionReceived = false;
+            cam.stopPreview();
+            cam.release();
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -87,9 +111,38 @@ public class PebbleService extends Service {
 
                     @Override
                     public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
-                        Log.i(C.TAG, "Received value=" + data.getUnsignedIntegerAsLong(0) + " for key: 0");
-
+//                        Log.i(C.TAG, "Received value=" + data.getUnsignedIntegerAsLong(0) + " for key: 0");
+//                        Log.i(C.TAG, "Received value=" + data.getUnsignedIntegerAsLong(1) + " for key: 1");
+//                        Log.i(C.TAG, "Received value=" + data.getUnsignedIntegerAsLong(2) + " for key: 2");
                         PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
+
+                        long x1 = data.getInteger(0);
+                        long y1 = data.getInteger(1);
+
+                        if (!actionReceived) {
+                            if (x1 > -800) {
+                                if (y1 > 800) {
+                                    cam = Camera.open();
+                                    Camera.Parameters p = cam.getParameters();
+                                    p.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                                    cam.setParameters(p);
+                                    cam.startPreview();
+
+                                    actionReceived = true;
+                                    mHandler.postDelayed(toggleFlash, 10000);
+
+                                } else if (y1 < -800) {
+                                    actionReceived = true;
+                                    mHandler.postDelayed(r, 10000);
+                                    //extended left
+                                    Log.i(C.TAG, "LEFT");
+                                    Intent i = new Intent(Intent.ACTION_DIAL);
+                                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(i);
+                                }
+                            }
+                        }
+
                     }
                 });
             } else {
@@ -128,7 +181,7 @@ public class PebbleService extends Service {
     };
 
     public void setRightIntent(Intent i) {
-       rightIntent = i;
+
     };
 
     public void setBottomIntent(Intent i) {
