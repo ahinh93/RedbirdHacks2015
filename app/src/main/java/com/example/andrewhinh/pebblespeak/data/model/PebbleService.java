@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
@@ -60,29 +61,43 @@ public class PebbleService extends Service {
             if (PebbleKit.areAppMessagesSupported(getApplicationContext())) {
                 Log.i(C.TAG, "App Message is supported!");
 
-                PebbleDictionary data = new PebbleDictionary();
+                PebbleKit.registerReceivedAckHandler(getApplicationContext(), new PebbleKit.PebbleAckReceiver(C.APP_ID) {
 
-                // Add a key of 0, and a uint8_t (byte) of value 42.
-                data.addUint8(0, (byte) 42);
+                    @Override
+                    public void receiveAck(Context context, int transactionId) {
+                        Log.i(C.TAG, "Received ack for transaction " + transactionId);
+                    }
 
-                // Add a key of 1, and a string value.
-                data.addString(1, "A string");
+                });
 
-                PebbleKit.sendDataToPebble(getApplicationContext(), C.APP_ID, data);
+                PebbleKit.registerReceivedNackHandler(getApplicationContext(), new PebbleKit.PebbleNackReceiver(C.APP_ID) {
 
+                    @Override
+                    public void receiveNack(Context context, int transactionId) {
+                        Log.i(C.TAG, "Received nack for transaction " + transactionId);
+                    }
+
+                });
+
+                PebbleKit.registerReceivedDataHandler(this, new PebbleKit.PebbleDataReceiver(C.APP_ID) {
+
+                    @Override
+                    public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
+                        Log.i(C.TAG, "Received value=" + data.getUnsignedIntegerAsLong(0) + " for key: 0");
+
+                        PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
+                    }
+                });
             } else {
                 Log.i(C.TAG, "App Message is not supported");
             }
         }
-
         return Service.START_NOT_STICKY;
     }
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-
         super.onTaskRemoved(rootIntent);
-
         // Closing my app
         PebbleKit.closeAppOnPebble(getApplicationContext(), C.APP_ID);
     }
@@ -90,5 +105,11 @@ public class PebbleService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    public class BluetoothBinder extends Binder {
+        public PebbleService getService() {
+            return PebbleService.this;
+        }
     }
 }
