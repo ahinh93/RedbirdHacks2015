@@ -23,6 +23,10 @@ public class PebbleService extends Service {
         return mThis;
     }
 
+    public static Intent leftIntent, rightIntent, bottomIntent, shakeIntent;
+
+    private final IBinder mBinder = new BluetoothBinder();
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -104,7 +108,13 @@ public class PebbleService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+
+        return super.onUnbind(intent);
     }
 
     public class BluetoothBinder extends Binder {
@@ -112,4 +122,30 @@ public class PebbleService extends Service {
             return PebbleService.this;
         }
     }
+
+    public void setLeftIntent(Intent i){
+        leftIntent = i;
+    };
+
+    public void setRightIntent(Intent i) {
+       rightIntent = i;
+    };
+
+    public void setBottomIntent(Intent i) {
+        bottomIntent = i;
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+    };
+
+    public Intent getLeftIntent() {
+        return leftIntent;
+    };
+
+    public Intent getRightIntent() {
+        return rightIntent;
+    };
+
+    public Intent getBottomIntent() {
+        return bottomIntent;
+    };
 }

@@ -1,6 +1,7 @@
 package com.example.andrewhinh.pebblespeak.activity;
 
 import com.example.andrewhinh.pebblespeak.R;
+import com.example.andrewhinh.pebblespeak.adapter.IntentAdapter;
 import com.example.andrewhinh.pebblespeak.data.model.PebbleService;
 import com.example.andrewhinh.pebblespeak.util.SystemUiHider;
 import com.getpebble.android.kit.PebbleKit;
@@ -8,12 +9,17 @@ import com.getpebble.android.kit.PebbleKit;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
+import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
@@ -34,7 +40,7 @@ import java.util.UUID;
 public class SelectionActivity extends Activity {
 
     private ListView mainMenu;
-    private ArrayAdapter<String> listAdapter;
+    private IntentAdapter listAdapter;
     /**
      * Whether or not the system UI should be auto-hidden after
      * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -65,140 +71,106 @@ public class SelectionActivity extends Activity {
 
     private PebbleService mPebbleService;
 
+
+    private boolean isBound = false;
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+
+            mPebbleService = ((PebbleService.BluetoothBinder)service).getService();
+
+            //registerReceiver(mBatteryReceiver, new IntentFilter("com.servabosafe.shadow.batterybroadcast"));
+
+            //isRegisterReceived = true;
+
+            //mShadowService.getBatteryLevel();
+
+            //Toast.makeText(getActivity(), "Fragment connected to service.", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+            mPebbleService = null;
+
+            //unregisterReceiver(mBatteryReceiver);
+
+            //Toast.makeText(getActivity(), "Fragment disconnected from service.", Toast.LENGTH_SHORT).show();
+
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_selection);
-        
+
         //tie to .xml variable
         mainMenu = (ListView) findViewById( R.id.mainMenu );
 
-        String[] planets = new String[] { "Mercury", "Venus", "Earth", "Mars",
-                "Jupiter", "Saturn", "Uranus", "Neptune"};
-        ArrayList<String> planetList = new ArrayList<String>();
-        planetList.addAll( Arrays.asList(planets) );
 
         // Create ArrayAdapter using the planet list.
-        listAdapter = new ArrayAdapter<String>(this, R.layout.simplerow, planetList);
+        listAdapter = new IntentAdapter(SelectionActivity.this, R.layout.item_user);
 
-        listAdapter.add( "Ceres" );
-        listAdapter.add( "Pluto" );
-        listAdapter.add( "Haumea" );
-        listAdapter.add( "Makemake" );
-        listAdapter.add( "Eris" );
+        Intent sendIntent = new Intent(Intent.ACTION_VIEW);
+        sendIntent.setData(Uri.parse("sms:"));
+
+        String clientId = "my_client_id";
+        Intent soundIntent = new Intent("com.soundcloud.android.SHARE")
+                .putExtra("com.soundcloud.android.extra.tags", new String[] {
+                        "soundcloud:created-with-client-id="+clientId
+                });
+
+        listAdapter.add( new Pair<String, Intent> ("Message", sendIntent) );
+        listAdapter.add( new Pair<String, Intent> ("Call", new Intent(Intent.ACTION_DIAL)) );
+        listAdapter.add( new Pair<String, Intent> ("Sound", soundIntent ));
 
         mainMenu.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
+                Toast.makeText(getApplicationContext(), listAdapter.getItem(position).first, Toast.LENGTH_SHORT).show();
+                if (mPebbleService != null)
+                    mPebbleService.setBottomIntent(listAdapter.getItem(position).second);
             }
         });
 
         mainMenu.setAdapter( listAdapter );
 
-        final View controlsView = findViewById(R.id.fullscreen_content_controls);
-        final View contentView = findViewById(R.id.fullscreen_content);
-
-        // Set up an instance of SystemUiHider to control the system UI for
-        // this activity.
-        mSystemUiHider = SystemUiHider.getInstance(this, contentView, HIDER_FLAGS);
-        mSystemUiHider.setup();
-        mSystemUiHider
-                .setOnVisibilityChangeListener(new SystemUiHider.OnVisibilityChangeListener() {
-                    // Cached values.
-                    int mControlsHeight;
-                    int mShortAnimTime;
-
-                    @Override
-                    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-                    public void onVisibilityChange(boolean visible) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-                            // If the ViewPropertyAnimator API is available
-                            // (Honeycomb MR2 and later), use it to animate the
-                            // in-layout UI controls at the bottom of the
-                            // screen.
-                            if (mControlsHeight == 0) {
-                                mControlsHeight = controlsView.getHeight();
-                            }
-                            if (mShortAnimTime == 0) {
-                                mShortAnimTime = getResources().getInteger(
-                                        android.R.integer.config_shortAnimTime);
-                            }
-                            controlsView.animate()
-                                    .translationY(visible ? 0 : mControlsHeight)
-                                    .setDuration(mShortAnimTime);
-                        } else {
-                            // If the ViewPropertyAnimator APIs aren't
-                            // available, simply show or hide the in-layout UI
-                            // controls.
-                            controlsView.setVisibility(visible ? View.VISIBLE : View.GONE);
-                        }
-
-                        if (visible && AUTO_HIDE) {
-                            // Schedule a hide().
-                            delayedHide(AUTO_HIDE_DELAY_MILLIS);
-                        }
-                    }
-                });
-
-        // Set up the user interaction to manually show or hide the system UI.
-        contentView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (TOGGLE_ON_CLICK) {
-                    mSystemUiHider.toggle();
-                } else {
-                    mSystemUiHider.show();
-                }
-            }
-        });
-
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+        doBindService();
     }
 
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-        delayedHide(100);
     }
 
-
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
-
-    Handler mHideHandler = new Handler();
-    Runnable mHideRunnable = new Runnable() {
-        @Override
-        public void run() {
-            mSystemUiHider.hide();
-        }
-    };
-
-    /**
-     * Schedules a call to hide() in [delay] milliseconds, canceling any
-     * previously scheduled calls.
-     */
-    private void delayedHide(int delayMillis) {
-        mHideHandler.removeCallbacks(mHideRunnable);
-        mHideHandler.postDelayed(mHideRunnable, delayMillis);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(mConnection);
     }
+
+    private void doBindService() {
+
+        //the service is bound
+        getApplicationContext().bindService(new Intent(SelectionActivity.this, PebbleService.class), mConnection, Context.BIND_AUTO_CREATE);
+
+        //Toast.makeText(SSConnectActivity.this, "Bound from activity", Toast.LENGTH_SHORT).show();
+
+        //our service bound
+        isBound = true;
+
+    }
+
+    private void doUnbindService() {
+
+        if (isBound) {
+            unbindService(mConnection);
+            isBound = false;
+            //Toast.makeText(SSConnectActivity.this, "Unbound from activity", Toast.LENGTH_SHORT).show();
+        }
+    }
+
 }
